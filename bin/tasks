@@ -35,4 +35,7 @@ for r in c:
 	pid = r['parentId']
 	if pid==None:
 		pid=""
-	print "%5s %5s %-50s" % (r['_id'],pid,r['name'])
+	if options.status == None:
+		print "%5s %5s %-10s %-50s" % (r['_id'],pid,r['status'],r['name'])
+	else:
+		print "%5s %5s %-50s" % (r['_id'],pid,r['name'])
