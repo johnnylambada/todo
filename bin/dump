@@ -1,0 +1,2 @@
+#!/bin/bash
+sqlite3 todo .dump >bu/todo-$(date +%Y%m%d-%H%M).sql

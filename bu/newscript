@@ -1,0 +1,200 @@
+#!/bin/bash
+#######################################################################
+# newscript - a new script
+#######################################################################
+#{{{ <constants>            simple constants
+thisScript=$0
+thisScriptName=$(basename $thisScript) 
+thisScriptDir=$(dirname $(readlink -f $thisScript))
+TLD=$(dirname $thisScriptDir)
+#}}}
+#{{{ <include>              include source
+#{{{ command.bash
+#{{{ Command_AddPart       func to add a new Command_part
+Command_AddPart() {
+	Command_LastPart=$1
+	Command_Parts[${#Command_Parts[@]}]="$1"
+}
+#}}}
+#{{{ Command_Error         Display an error and exit
+Command_Error() {
+	printf "ERROR: $1\n" 1>&2
+	exit 1
+}
+#}}}
+#{{{ Command_Exec          Run a command
+Command_Exec_Cmd=""
+Command_Exec() {
+	local cmd=""
+	local noecho=0
+	while [ "${1:0:1}" == "-" ]; do
+		case $1 in
+		-n)	noecho=1;;
+		esac
+		shift
+	done
+	cmd="$@"
+	Command_Exec_Cmd="$cmd"
+	[ $noecho == 0 ] && echo "==>$cmd" >&2
+	$cmd
+}
+#}}}
+#{{{ Command_Exec_Fail     Run a command and fail on failure
+Command_Exec_Fail() {
+	Command_Exec "$@" || Command_Error "$Command_Exec_Cmd failed"
+}
+#}}}
+#{{{ Command_FindInclude   finds the named include file
+Command_FindInclude() {
+	local name
+	Command_FindIncludeTry() {
+		local name=$TLD/$1/$2
+		if [ -r $name ]; then
+			echo $name
+			return 0
+		fi
+		return 1
+	}
+	Command_FindIncludeTry config $1 && return 0
+	Command_FindIncludeTry etc $1 && return 0
+	Command_FindIncludeTry scripts $1 && return 0
+	return 1
+}
+#}}}
+#{{{ Command_FuncName      func returns the CMD_ function to run
+Command_FuncName() {
+	if [ -n "$Command_SetValue" ]; then
+		echo $(declare -F CMD_$Command_SetValue)
+		return
+	fi
+	local cmd
+	cmd=$(declare -F | perl -ne 'BEGIN{$a=join"",map"(?=.*$_)",@ARGV;$o=join"|",splice @ARGV}END{print substr($x,11)}$x=$_ if /declare -f CMD_$a($o)*$/' ${Command_Parts[@]})
+	echo $cmd
+}
+#}}}
+#{{{ Command_LastPart      string holding the last part added
+Command_LastPart=""
+#}}}
+#{{{ Command_Main          The Mainline of the script
+Command_Main() {
+	# For each token on the command line
+	local funcs
+	funcs=$(declare -F | sed -n '/declare -f TOK_/s/declare -f TOK_\(.*\)/\1/p')
+	while [ -n "$1" ]; do
+		local found=0
+		local name=$(echo $1|tr "[:upper:]" "[:lower:]")
+		local f
+		# Find a TOK_ function that knows what to do with this token
+		for f in $funcs; do if [ "$f" == "$name" ]; then
+			TOK_$name "$@"
+			shift $?
+			found=1
+			break
+		fi; done
+		if [ $found -eq 0 ];then
+			printf "ERROR syntax error: $1\n" 1>&2
+			exit 1
+		fi
+		shift
+	done
+
+	# Run the Command
+	local err
+	local CMD=$(Command_FuncName)
+	if [ -z "$CMD" ]; then
+		echo "Cannot find that command" 1>&2
+		Command_Usage
+		err=1
+	else
+		shift
+		$CMD
+		err=$?
+	fi
+	exit $err
+}
+#}}}
+#{{{ Command_Set           func to set the command to a specific token
+# When this command is used, the Command_Parts are ignored when deciding what
+# CMD_ function to use
+Command_Set() { Command_LastPart=$1; Command_SetValue="$1"; }
+#}}}
+#{{{ Command_Usage         Show the usage
+# --------------------------------------------------------------------
+function Command_Usage {
+	local cmd;
+	echo "USAGE:
+$thisScript command
+Commands" 1>&2
+	for cmd in $(sed -n -e '1,/^exit#END#/{s/^#[{][{][{] CMD_\([A-Z][a-zA-Z0-9_]*\)[[:space:]]*\(.*\)/\1/p}' $thisScript); do
+		local xcmd=$(echo $cmd|sed 's/\([A-Z]\)/ \1/g')
+		local desc=$(sed -n '1,/^exit#END#/{s/^#[{][{][{] CMD_'${cmd}'[[:space:]][[:space:]]*\(.*\)/\1/p}' $thisScript)
+		printf "  %-20s%s\n" "${xcmd:1}" "$desc" 1>&2
+		sed -n -e '1,/^exit#END#/{/^#[{][{][{] CMD_'${cmd}'[[:space:]]/,/^#[}][}][}]/{/^# IN[[:space:]]/s/^# IN [a-z_]*[[:space:]]*\([\x5b].*[\x5d]\)[[:space:]]\(.*\)/\1~\2/p}}' $thisScript | awk -F~ '{printf "    %-20s%s\n",$1,$2}' 1>&2
+		echo 1>&2
+	done
+}
+#}}}
+#{{{ private
+#{{{ Command_Parts        \nPart1\nPart2\nPart3
+Command_Parts=()		# The parts of the command.  Builds up the func to call
+Command_SetValue=""		# Overrides Command_Parts -- the CMD_ func to call
+#}}}
+#}}}
+#}}}
+#{{{ misc.bash - misc functions that should be part of bash
+#{{{ toCapitalized         Change a string to Capitalized
+toCapitalized() {
+	printf "%s%s\n" $(toUpper ${1:0:1}) $(toLower ${1:1})
+}
+#}}}
+#{{{ toLower               Change a string to lower case
+toLower() {
+	echo $1 | tr "[:upper:]" "[:lower:]"
+}
+#}}}
+#{{{ toUpper               Change a string to UPPER case
+toUpper() {
+	echo $1 | tr "[:lower:]" "[:upper:]"
+}
+#}}}
+#}}}
+#}}}
+#{{{ <defaults>             default values
+parm_output=""
+parm_verbose=0
+#}}}
+#{{{ TOK_                   functions that parse the command line
+# TOK_ functions know how to parse command line tokens.  If a token requires
+# parameters, then they will be on the command line.  $1 is the token itself
+# $2 is the first parameter, etc.  Return the number of parameters used.
+
+TOK_command()	{ Command_AddPart "Command"; }
+TOK_output()	{ parm_output=$2; return 1; }
+TOK_test()		{ Command_AddPart "Test"; }
+TOK_verbose()	{ parm_verbose=1; }
+
+#}}}
+#{{{ CMD_                   functions that implement the functionality
+#{{{ CMD_TestCommand       A test command
+# IN parm_output [output something] some output - a single word
+function CMD_TestCommand {
+
+    [ -z "$parm_output" ] && Command_Error "You have to ask for some output"
+
+	[ $parm_verbose -eq 1 ] && echo "I'm verbose!"
+	echo "output = $parm_output"
+
+}
+#}}}
+#}}}
+
+
+#{{{ Local functions
+#}}}
+
+Command_Main "$@"
+exit#END#
+
+# ------------------------- don't delete below here -------------------
+# vim:foldmethod=marker
+# vim:ts=4

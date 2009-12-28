@@ -1,0 +1,29 @@
+#!/usr/bin/python
+
+from sqlite3 import dbapi2 as sqlite
+from optparse import OptionParser
+import sys
+
+parser = OptionParser()
+parser.add_option("-i", "--id", dest="id",
+                  help="The id of the task",default=None)
+parser.add_option("-s", "--status", dest="status",
+                  help="Task new status of the task")
+
+(options, args) = parser.parse_args()
+
+t=( options.status, options.id )
+
+if options.id==None:
+	print "you must choose an id"
+	sys.exit(1)
+
+if options.status==None:
+	print "you must choose a status"
+	sys.exit(1)
+
+conn = sqlite.connect('todo')
+c = conn.cursor()
+c.execute("update task set status=? where _id=?",t)
+conn.commit()
+c.close()

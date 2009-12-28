@@ -1,0 +1,20 @@
+#!/usr/bin/python
+
+from sqlite3 import dbapi2 as sqlite
+from optparse import OptionParser
+
+parser = OptionParser()
+parser.add_option("-n", "--name", dest="name",
+                  help="The name of the task",default=None)
+parser.add_option("-p", "--parent", dest="parentId",
+                  help="Task ID of parent task")
+
+(options, args) = parser.parse_args()
+
+t=(options.name, options.parentId)
+
+conn = sqlite.connect('todo')
+c = conn.cursor()
+c.execute("insert into task (name,parentId,status) values (?,?,'open')",t)
+conn.commit()
+c.close()
