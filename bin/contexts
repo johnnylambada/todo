@@ -1,0 +1,29 @@
+#!/usr/bin/python
+
+from sqlite3 import dbapi2 as sqlite
+from optparse import OptionParser
+
+parser = OptionParser()
+parser.add_option("-s", "--status", dest="status",
+                  help="Only show tasks with this status")
+parser.add_option("-c", "--context", dest="context",
+                  help="Only show tasks associated with this context")
+
+(options, args) = parser.parse_args()
+
+t=[]
+sql = "select context.context as context, count(task._id) as tasks from task,context where task._id = context.taskId"
+if options.status != None:
+	sql = sql+" and task.status=?"
+	t.append(options.status)
+if options.context != None:
+	sql = sql+" and context.context=?"
+	t.append(options.context)
+sql = sql+" group by context.context"
+
+conn = sqlite.connect('todo')
+conn.row_factory = sqlite.Row
+c = conn.cursor()
+c.execute(sql,t)
+for r in c:
+	print "%s (%s)" % (r['context'],r['tasks'])

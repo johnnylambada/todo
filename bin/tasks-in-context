@@ -1,0 +1,33 @@
+#!/usr/bin/python
+
+from sqlite3 import dbapi2 as sqlite
+from optparse import OptionParser
+
+parser = OptionParser()
+parser.add_option("-s", "--status", dest="status",
+                  help="Only show tasks with this status")
+parser.add_option("-c", "--context", dest="context",
+                  help="Only show tasks associated with this context")
+
+(options, args) = parser.parse_args()
+
+t=[]
+sql = "select * from task,context where task._id = context.taskId"
+if options.status != None:
+	sql = sql+" and task.status=?"
+	t.append(options.status)
+if options.context != None:
+	sql = sql+" and context.context=?"
+	t.append(options.context)
+sql = sql+" order by context.context,task._id"
+
+conn = sqlite.connect('todo')
+conn.row_factory = sqlite.Row
+c = conn.cursor()
+c.execute(sql,t)
+lastContext = None
+for r in c:
+	if lastContext != r['context']:
+		print r['context']
+		lastContext = r['context']
+	print "   %s (%s)" % (r['name'],r['_id'])
