@@ -2,6 +2,7 @@
 
 from sqlite3 import dbapi2 as sqlite
 from optparse import OptionParser
+import sys
 
 parser = OptionParser()
 parser.add_option("-n", "--name", dest="name",
@@ -12,6 +13,10 @@ parser.add_option("-p", "--parent", dest="parentId",
 (options, args) = parser.parse_args()
 
 t=(options.name, options.parentId)
+
+if options.name == None:
+	print "you must give a name"
+	sys.exit(1)
 
 conn = sqlite.connect('todo')
 c = conn.cursor()
