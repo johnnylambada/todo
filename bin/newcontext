@@ -1,0 +1,25 @@
+#!/usr/bin/python
+
+from sqlite3 import dbapi2 as sqlite
+from optparse import OptionParser
+import sys
+
+parser = OptionParser()
+parser.add_option("-c", "--context", dest="context",
+                  help="The name of the context",default=None)
+parser.add_option("-i", "--id", dest="taskId",
+                  help="Task ID of task")
+
+(options, args) = parser.parse_args()
+
+t=(options.context, options.taskId)
+
+if options.context == None or options.taskId == None:
+	print "you must give a context and a task id"
+	sys.exit(1)
+
+conn = sqlite.connect('todo')
+c = conn.cursor()
+c.execute("insert into context (context,taskId) values (?,?)",t)
+conn.commit()
+c.close()
