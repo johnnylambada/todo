@@ -21,6 +21,9 @@ class Todo:
 		parser.add_option("-i", "--id", dest="id",
 			help="Select this task id")
 
+		parser.add_option("-c", "--context", dest="context",
+            help="Only show tasks associated with this context")
+
 		(self.options, self.args) = parser.parse_args()
 		if len(self.args) != 1:
 			parser.error("one command required")
@@ -30,6 +33,25 @@ class Todo:
 			eval(s)
 		except (AttributeError):
 			parser.error("that is not a command")
+
+	def CMD_contexts(self):
+		"""Show contexts and number of associated tasks"""
+		t=[]
+		sql = "select context.context as context, count(task._id) as tasks from task,context where task._id = context.taskId"
+		if self.options.status != 'all':
+			sql = sql+" and task.status=?"
+			t.append(self.options.status)
+		if self.options.context != None:
+			sql = sql+" and context.context=?"
+			t.append(self.options.context)
+		sql = sql+" group by context.context"
+
+		conn = sqlite.connect('todo')
+		conn.row_factory = sqlite.Row
+		c = conn.cursor()
+		c.execute(sql,t)
+		for r in c:
+			print "%s (%s)" % (r['context'],r['tasks'])
 
 	def CMD_showtasks(self):
 		"""Show the selected tasks"""

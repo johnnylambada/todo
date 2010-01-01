@@ -1,0 +1,12 @@
+- move all code into the bin/todo script
+
+- make this todo list into a database (eat own dog food)
+	- ability to use a different file name
+
+- break todo class into classes
+	- command line ui
+	- database
+	- business rules
+	- gui
+
+- try it on the phone
