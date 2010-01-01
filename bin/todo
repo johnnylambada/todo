@@ -10,23 +10,29 @@ class Todo:
 
 	def main(self):
 		from optparse import OptionParser
-		parser = OptionParser( "usage: %prog [options] command")
+		usage="usage: %prog [options] command\n\nCommands:"
+		cmds=[]
+		for x in dir(self):
+			if x[:4]=='CMD_':
+				usage="%s\n  %-21s %s" % (usage,x[4:],eval('self.%s.__doc__' % x))
+		parser = OptionParser(usage)
 		parser.add_option("-s", "--status", dest="status", default='open',
-			help="Only show tasks with this status. 'all' for all tasks. 'open' tasks shown by default.")
+			help="Select tasks with this status. 'all' for all tasks. 'open' by default.")
 		parser.add_option("-i", "--id", dest="id",
-			help="Only show tasks associated with this task id")
+			help="Select this task id")
 
 		(self.options, self.args) = parser.parse_args()
 		if len(self.args) != 1:
 			parser.error("one command required")
 
-		s='self.'+self.args[0]+'()'
+		s='self.CMD_'+self.args[0]+'()'
 		try:
 			eval(s)
 		except (AttributeError):
 			parser.error("that is not a command")
 
-	def showtasks(self):
+	def CMD_showtasks(self):
+		"""Show the selected tasks"""
 		t=[]
 		sql = "select * from task where _id > '0'"
 		if self.options.status != 'all':
