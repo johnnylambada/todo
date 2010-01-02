@@ -69,6 +69,7 @@ class Todo:
 		c = conn.cursor()
 		c.execute("insert into task (name,parentId,status) values (?,?,'open')",t)
 		conn.commit()
+		print 'added task #%s' % c.lastrowid
 		c.close()
 
 	def CMD_editstatus(self):
