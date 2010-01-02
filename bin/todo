@@ -43,6 +43,20 @@ class Todo:
 		except (AttributeError):
 			parser.error("that is not a command")
 
+	def CMD_addcontext(self):
+		"""Add a task to a context"""
+		t=(self.options.context, self.options.id)
+
+		if self.options.context == None or self.options.id == None:
+			print "you must give a context and a task id"
+			sys.exit(1)
+
+		conn = sqlite.connect('todo')
+		c = conn.cursor()
+		c.execute("insert into context (context,taskId) values (?,?)",t)
+		conn.commit()
+		c.close()
+
 	def CMD_addtask(self):
 		"""Add a new task"""
 		t=(self.options.name, self.options.parentId)
