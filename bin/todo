@@ -34,7 +34,7 @@ class Todo:
 		except (AttributeError):
 			parser.error("that is not a command")
 
-	def CMD_contexts(self):
+	def CMD_showcontexts(self):
 		"""Show contexts and number of associated tasks"""
 		t=[]
 		sql = "select context.context as context, count(task._id) as tasks from task,context where task._id = context.taskId"
@@ -78,6 +78,30 @@ class Todo:
 				print "%5s %5s %-10s %-50s" % (r['_id'],pid,r['status'],r['name'])
 			else:
 				print "%5s %5s %-50s" % (r['_id'],pid,r['name'])
+
+
+	def CMD_showcontasks(self):
+		"""Show tasks in context"""
+		t=[]
+		sql = "select * from task,context where task._id = context.taskId"
+		if self.options.status != 'all':
+			sql = sql+" and task.status=?"
+			t.append(self.options.status)
+		if self.options.context != None:
+			sql = sql+" and context.context=?"
+			t.append(self.options.context)
+		sql = sql+" order by context.context,task._id"
+		
+		conn = sqlite.connect('todo')
+		conn.row_factory = sqlite.Row
+		c = conn.cursor()
+		c.execute(sql,t)
+		lastContext = None
+		for r in c:
+			if lastContext != r['context']:
+				print r['context']
+				lastContext = r['context']
+			print "   %s (%s)" % (r['name'],r['_id'])
 
 if __name__ == '__main__':
 	todo = Todo()
