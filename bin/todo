@@ -17,11 +17,18 @@ class Todo:
 			if x[:4]=='CMD_':
 				usage="%s\n  %-21s %s" % (usage,x[4:],eval('self.%s.__doc__' % x))
 		parser = OptionParser(usage)
-		parser.add_option("-i", "--id", dest="id",
-			help="Task id")
 
 		parser.add_option("-c", "--context", dest="context",
             help="Ccontext")
+
+		parser.add_option("-i", "--id", dest="id",
+			help="Task id")
+
+		parser.add_option("-n", "--name", dest="name",
+            help="Task name",default=None)
+
+		parser.add_option("-p", "--parent", dest="parentId",
+            help="Task ID of parent task")
 
 		parser.add_option("-s", "--status", dest="status", default='open',
 			help="Status - 'open' by default. (When selecting, 'all' for all tasks.)")
@@ -35,6 +42,20 @@ class Todo:
 			eval(s)
 		except (AttributeError):
 			parser.error("that is not a command")
+
+	def CMD_addtask(self):
+		"""Add a new task"""
+		t=(self.options.name, self.options.parentId)
+
+		if self.options.name == None:
+			print "you must give a name"
+			sys.exit(1)
+
+		conn = sqlite.connect('todo')
+		c = conn.cursor()
+		c.execute("insert into task (name,parentId,status) values (?,?,'open')",t)
+		conn.commit()
+		c.close()
 
 	def CMD_editstatus(self):
 		"""Edit the status of the selected task id"""
