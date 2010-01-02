@@ -18,17 +18,18 @@ class Todo:
 				usage="%s\n  %-21s %s" % (usage,x[4:],eval('self.%s.__doc__' % x))
 		parser = OptionParser(usage)
 
-		parser.add_option("-c", "--context", dest="context",
-            help="Ccontext")
+		parser.add_option("-c", "--context", dest="context", metavar="CX",
+            help="Context")
 
 		parser.add_option("-n", "--name", dest="name",
             help="Task name",default=None)
 
-		parser.add_option("-p", "--parent", dest="parentId",
+		parser.add_option("-p", "--parent", dest="parentId", metavar="PID",
             help="Task ID of parent task")
 
 		parser.add_option("-s", "--status", dest="status", default='open',
-			help="Status - 'open' by default. (When selecting, 'all' for all tasks.)")
+			metavar="ST",
+			help="Status - default: 'open'. When selecting: 'all' for all tasks.")
 
 		parser.add_option("-t", "--task", dest="task",
 			help="Task id")
