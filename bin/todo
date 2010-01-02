@@ -21,9 +21,6 @@ class Todo:
 		parser.add_option("-c", "--context", dest="context",
             help="Ccontext")
 
-		parser.add_option("-i", "--id", dest="id",
-			help="Task id")
-
 		parser.add_option("-n", "--name", dest="name",
             help="Task name",default=None)
 
@@ -32,6 +29,9 @@ class Todo:
 
 		parser.add_option("-s", "--status", dest="status", default='open',
 			help="Status - 'open' by default. (When selecting, 'all' for all tasks.)")
+
+		parser.add_option("-t", "--task", dest="task",
+			help="Task id")
 
 		(self.options, self.args) = parser.parse_args()
 		if len(self.args) != 1:
@@ -45,9 +45,9 @@ class Todo:
 
 	def CMD_addcontext(self):
 		"""Add a task to a context"""
-		t=(self.options.context, self.options.id)
+		t=(self.options.context, self.options.task)
 
-		if self.options.context == None or self.options.id == None:
+		if self.options.context == None or self.options.task == None:
 			print "you must give a context and a task id"
 			sys.exit(1)
 
@@ -73,9 +73,9 @@ class Todo:
 
 	def CMD_editstatus(self):
 		"""Edit the status of the selected task id"""
-		t=( self.options.status, self.options.id )
+		t=( self.options.status, self.options.task )
 
-		if self.options.id==None:
+		if self.options.task==None:
 			print "you must choose an id"
 			sys.exit(1)
 
@@ -138,10 +138,10 @@ class Todo:
 		if self.options.status != 'all':
 			sql = sql+"and status=?"
 			t.append(self.options.status)
-		if self.options.id != None:
+		if self.options.task != None:
 			sql = sql+"and _id=? or parentId=?"
-			t.append(self.options.id)
-			t.append(self.options.id)
+			t.append(self.options.task)
+			t.append(self.options.task)
 
 		conn = sqlite.connect('todo')
 		conn.row_factory = sqlite.Row
