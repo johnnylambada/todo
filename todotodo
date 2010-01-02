@@ -1,5 +1,7 @@
 - move all code into the bin/todo script
 
+- make sure all CLI code asks for info as well as allows it by command line
+
 - make this todo list into a database (eat own dog food)
 	- ability to use a different file name
 
