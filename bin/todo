@@ -45,7 +45,7 @@ class Todo:
 			parser.error("that is not a command")
 
 	def CMD_addcontext(self):
-		"""Add a task to a context"""
+		"""Add a task to a context: -t TASK -c CONTEXT"""
 		t=(self.options.context, self.options.task)
 
 		if self.options.context == None or self.options.task == None:
@@ -59,7 +59,7 @@ class Todo:
 		c.close()
 
 	def CMD_addtask(self):
-		"""Add a new task"""
+		"""Add a new task: -n NAME [-p PID]"""
 		t=(self.options.name, self.options.parentId)
 
 		if self.options.name == None:
@@ -74,7 +74,7 @@ class Todo:
 		c.close()
 
 	def CMD_editstatus(self):
-		"""Edit the status of the selected task id"""
+		"""Edit status of the task: -t TASK -s STATUS"""
 		t=( self.options.status, self.options.task )
 
 		if self.options.task==None:
@@ -92,7 +92,7 @@ class Todo:
 		c.close()
 
 	def CMD_showcontasks(self):
-		"""Show tasks in context"""
+		"""Show tasks in context: [-s STATUS] [-c CONTEXT]"""
 		t=[]
 		sql = "select * from task,context where task._id = context.taskId"
 		if self.options.status != 'all':
@@ -115,7 +115,7 @@ class Todo:
 			print "   %s (%s)" % (r['name'],r['_id'])
 
 	def CMD_showcontexts(self):
-		"""Show contexts and number of associated tasks"""
+		"""Show contexts w/ task counts: [-s STATUS] [-c CONTEXT]"""
 		t=[]
 		sql = "select context.context as context, count(task._id) as tasks from task,context where task._id = context.taskId"
 		if self.options.status != 'all':
@@ -134,7 +134,7 @@ class Todo:
 			print "%s (%s)" % (r['context'],r['tasks'])
 
 	def CMD_showtasks(self):
-		"""Show the selected tasks"""
+		"""Show the selected tasks: [-s STATUS] [-t TASK]"""
 		t=[]
 		sql = "select * from task where _id > '0'"
 		if self.options.status != 'all':
