@@ -8,6 +8,7 @@ class Todo:
 	def __init__(self):
 		self.options = None
 		self.args = None
+		self.file = 'todo'
 
 	def main(self):
 		from optparse import OptionParser
@@ -52,7 +53,7 @@ class Todo:
 			print "you must give a context and a task id"
 			sys.exit(1)
 
-		conn = sqlite.connect('todo')
+		conn = sqlite.connect(self.file)
 		c = conn.cursor()
 		c.execute("insert into context (context,taskId) values (?,?)",t)
 		conn.commit()
@@ -66,7 +67,7 @@ class Todo:
 			print "you must give a name"
 			sys.exit(1)
 
-		conn = sqlite.connect('todo')
+		conn = sqlite.connect(self.file)
 		c = conn.cursor()
 		c.execute("insert into task (name,parentId,status) values (?,?,'open')",t)
 		conn.commit()
@@ -85,7 +86,7 @@ class Todo:
 			print "you must choose a status"
 			sys.exit(1)
 
-		conn = sqlite.connect('todo')
+		conn = sqlite.connect(self.file)
 		c = conn.cursor()
 		c.execute("update task set status=? where _id=?",t)
 		conn.commit()
@@ -103,7 +104,7 @@ class Todo:
 			t.append(self.options.context)
 		sql = sql+" order by context.context,task._id"
 		
-		conn = sqlite.connect('todo')
+		conn = sqlite.connect(self.file)
 		conn.row_factory = sqlite.Row
 		c = conn.cursor()
 		c.execute(sql,t)
@@ -126,7 +127,7 @@ class Todo:
 			t.append(self.options.context)
 		sql = sql+" group by context.context"
 
-		conn = sqlite.connect('todo')
+		conn = sqlite.connect(self.file)
 		conn.row_factory = sqlite.Row
 		c = conn.cursor()
 		c.execute(sql,t)
@@ -145,7 +146,7 @@ class Todo:
 			t.append(self.options.task)
 			t.append(self.options.task)
 
-		conn = sqlite.connect('todo')
+		conn = sqlite.connect(self.file)
 		conn.row_factory = sqlite.Row
 		c = conn.cursor()
 		c.execute(sql,t)
