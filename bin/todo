@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 from sqlite3 import dbapi2 as sqlite
+import sys
 
 class Todo:
 
@@ -16,13 +17,14 @@ class Todo:
 			if x[:4]=='CMD_':
 				usage="%s\n  %-21s %s" % (usage,x[4:],eval('self.%s.__doc__' % x))
 		parser = OptionParser(usage)
-		parser.add_option("-s", "--status", dest="status", default='open',
-			help="Select tasks with this status. 'all' for all tasks. 'open' by default.")
 		parser.add_option("-i", "--id", dest="id",
-			help="Select this task id")
+			help="Task id")
 
 		parser.add_option("-c", "--context", dest="context",
-            help="Only show tasks associated with this context")
+            help="Ccontext")
+
+		parser.add_option("-s", "--status", dest="status", default='open',
+			help="Status - 'open' by default. (When selecting, 'all' for all tasks.)")
 
 		(self.options, self.args) = parser.parse_args()
 		if len(self.args) != 1:
@@ -33,6 +35,24 @@ class Todo:
 			eval(s)
 		except (AttributeError):
 			parser.error("that is not a command")
+
+	def CMD_editstatus(self):
+		"""Edit the status of the selected task id"""
+		t=( self.options.status, self.options.id )
+
+		if self.options.id==None:
+			print "you must choose an id"
+			sys.exit(1)
+
+		if self.options.status==None:
+			print "you must choose a status"
+			sys.exit(1)
+
+		conn = sqlite.connect('todo')
+		c = conn.cursor()
+		c.execute("update task set status=? where _id=?",t)
+		conn.commit()
+		c.close()
 
 	def CMD_showcontasks(self):
 		"""Show tasks in context"""
