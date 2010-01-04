@@ -9,9 +9,10 @@ class Todo:
 	def __init__(self):
 		self.options = None
 		self.args = None
-		self.findFile()
+		self.findDefaultFile()
 
-	def findFile(self):
+	def findDefaultFile(self):
+		"""Find the default file name. self.file may be changed by -f opt """
 		self.file = os.getenv("TODOFILE")
 		if self.file is None:
 			platform = sys.platform
