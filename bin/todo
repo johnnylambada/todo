@@ -1,14 +1,21 @@
 #!/usr/bin/python
 
-from sqlite3 import dbapi2 as sqlite
+import os
 import sys
+from sqlite3 import dbapi2 as sqlite
 
 class Todo:
 
 	def __init__(self):
 		self.options = None
 		self.args = None
-		self.file = 'todo'
+		self.findFile()
+
+	def findFile(self):
+		self.file = os.getenv("TODOFILE")
+		if self.file is None:
+			platform = sys.platform
+			self.file  = os.path.join( os.path.expanduser("~"), "todo.db")
 
 	def main(self):
 		from optparse import OptionParser
@@ -21,6 +28,9 @@ class Todo:
 
 		parser.add_option("-c", "--context", dest="context", metavar="CX",
             help="Context")
+
+		parser.add_option("-f", "--file", dest="file", metavar="F",
+            help="Database filename (default=%s)" % self.file)
 
 		parser.add_option("-n", "--name", dest="name",
             help="Task name",default=None)
@@ -36,14 +46,26 @@ class Todo:
 			help="Task id")
 
 		(self.options, self.args) = parser.parse_args()
+		if self.options.file != None:
+			self.file = self.options.file
+
+		# Now go do something
 		if len(self.args) != 1:
-			parser.error("one command required")
+			self.executeGUI()
+		else:
+			self.executeCMD()
+
+	def executeCMD(self):
+		# TODO: Verify the database is good here
 
 		s='self.CMD_'+self.args[0]+'()'
 		try:
 			eval(s)
 		except (AttributeError):
-			parser.error("that is not a command")
+			print("that is not a command")
+
+	def executeGUI(self):
+		print("The GUI should start. For now, use these cmds.")
 
 	def CMD_addcontext(self):
 		"""Add a task to a context: -t TASK -c CONTEXT"""
