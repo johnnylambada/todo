@@ -4,6 +4,14 @@ import os
 import sys
 from sqlite3 import dbapi2 as sqlite
 
+class Task:
+	def __init__(self, id, name, status):
+		self.id = id
+		self.name = name
+		self.status = status
+		self.kids = []
+		self.contexts = []
+
 class Todo:
 
 	def __init__(self):
@@ -15,8 +23,50 @@ class Todo:
 		"""Find the default file name. self.file may be changed by -f opt """
 		self.file = os.getenv("TODOFILE")
 		if self.file is None:
-			platform = sys.platform
 			self.file  = os.path.join( os.path.expanduser("~"), "todo.db")
+
+	def loadTasks(self, pid):
+		"""Load the tasks from the database"""
+
+		t=[]
+		sql = "select * from task where _id > '0'"
+		if pid == None:
+			sql = sql+" and parentId is null"
+		else:
+			sql = sql+" and parentId=?"
+			t.append(pid)
+
+		conn = sqlite.connect(self.file)
+		conn.row_factory = sqlite.Row
+		c = conn.cursor()
+		c.execute(sql,t)
+
+		tasks=[]
+		for r in c:
+			task=Task(r['_id'], r['name'], r['status'])
+			task.kids = self.loadTasks(r['_id'])
+			task.contexts = self.loadTaskContexts(r['_id'])
+			tasks.append(task)
+
+		return tasks
+		
+	def loadTaskContexts(self, pid):
+		"""Load the contexts for this task from the database"""
+
+		contexts=[]
+
+		t=[]
+		t.append(pid)
+		sql = "select context from context where taskId=?"
+		conn = sqlite.connect(self.file)
+		conn.row_factory = sqlite.Row
+		c = conn.cursor()
+		c.execute(sql,t)
+		for r in c:
+			contexts.append(r['context'])
+		c.close()
+
+		return contexts
 
 	def main(self):
 		from optparse import OptionParser
@@ -24,7 +74,8 @@ class Todo:
 		cmds=[]
 		for x in dir(self):
 			if x[:4]=='CMD_':
-				usage="%s\n  %-21s %s" % (usage,x[4:],eval('self.%s.__doc__' % x))
+				usage="%s\n  %-21s %s" % \
+					(usage,x[4:],eval('self.%s.__doc__' % x))
 		parser = OptionParser(usage)
 
 		parser.add_option("-c", "--context", dest="context", metavar="CX",
@@ -41,7 +92,7 @@ class Todo:
 
 		parser.add_option("-s", "--status", dest="status", default='open',
 			metavar="ST",
-			help="Status - default: 'open'. When selecting: 'all' for all tasks.")
+			help="Status. Default:'open'. When selecting: 'all' for all tasks.")
 
 		parser.add_option("-t", "--task", dest="task",
 			help="Task id")
@@ -57,7 +108,6 @@ class Todo:
 			self.executeCMD()
 
 	def executeCMD(self):
-		# TODO: Verify the database is good here
 
 		s='self.CMD_'+self.args[0]+'()'
 		try:
@@ -66,7 +116,7 @@ class Todo:
 			print("that is not a command")
 
 	def executeGUI(self):
-		print("The GUI should start. For now, use these cmds.")
+		print("If it existed, the GUI should start. For now, use the CLI.")
 
 	def CMD_addcontext(self):
 		"""Add a task to a context: -t TASK -c CONTEXT"""
@@ -90,11 +140,53 @@ class Todo:
 			print "you must give a name"
 			sys.exit(1)
 
+		sql = "insert into task (name,parentId,status) values (?,?,'open')"
 		conn = sqlite.connect(self.file)
 		c = conn.cursor()
-		c.execute("insert into task (name,parentId,status) values (?,?,'open')",t)
+		c.execute(sql, t)
 		conn.commit()
-		print 'added task #%s' % c.lastrowid
+		newtask = c.lastrowid
+		print 'added task #%s' % newtask
+		c.close()
+
+		if self.options.context != None:
+			self.options.task = newtask
+			self.CMD_addcontext()
+
+	def CMD_editname(self):
+		"""Edit name of the task: -t TASK -n NAME"""
+		t=( self.options.name, self.options.task )
+
+		if self.options.task==None:
+			print "you must choose an id"
+			sys.exit(1)
+
+		if self.options.name==None:
+			print "you must give an updated name"
+			sys.exit(1)
+
+		conn = sqlite.connect(self.file)
+		c = conn.cursor()
+		c.execute("update task set name=? where _id=?",t)
+		conn.commit()
+		c.close()
+
+	def CMD_editparent(self):
+		"""Edit parent of the task: -t TASK -s PID"""
+		t=( self.options.parentId, self.options.task )
+
+		if self.options.task==None:
+			print "you must choose an id"
+			sys.exit(1)
+
+		if self.options.parentId==None:
+			print "you must choose a parent ID"
+			sys.exit(1)
+
+		conn = sqlite.connect(self.file)
+		c = conn.cursor()
+		c.execute("update task set parentId=? where _id=?",t)
+		conn.commit()
 		c.close()
 
 	def CMD_editstatus(self):
@@ -112,6 +204,29 @@ class Todo:
 		conn = sqlite.connect(self.file)
 		c = conn.cursor()
 		c.execute("update task set status=? where _id=?",t)
+		conn.commit()
+		c.close()
+
+	def CMD_newtodo(self):
+		"""Create a new todo file."""
+
+		conn = sqlite.connect(self.file)
+		c = conn.cursor()
+		c.execute("""
+CREATE TABLE context (
+    "_id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "context" TEXT,
+    "taskId" INTEGER
+);
+""")
+		c.execute("""
+CREATE TABLE task (
+    "_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "name" TEXT,
+    "status" TEXT,
+    "parentId" INTEGER
+);
+""")
 		conn.commit()
 		c.close()
 
@@ -141,7 +256,10 @@ class Todo:
 	def CMD_showcontexts(self):
 		"""Show contexts w/ task counts: [-s STATUS] [-c CONTEXT]"""
 		t=[]
-		sql = "select context.context as context, count(task._id) as tasks from task,context where task._id = context.taskId"
+		sql = """
+select context, count(task._id) as tasks 
+from task,context where task._id = taskId
+"""
 		if self.options.status != 'all':
 			sql = sql+" and task.status=?"
 			t.append(self.options.status)
@@ -159,30 +277,19 @@ class Todo:
 
 	def CMD_showtasks(self):
 		"""Show the selected tasks: [-s STATUS] [-t TASK]"""
-		t=[]
-		sql = "select * from task where _id > '0'"
-		if self.options.status != 'all':
-			sql = sql+"and status=?"
-			t.append(self.options.status)
-		if self.options.task != None:
-			sql = sql+"and _id=? or parentId=?"
-			t.append(self.options.task)
-			t.append(self.options.task)
+		self.showtasks(0,self.loadTasks(None))
 
-		conn = sqlite.connect(self.file)
-		conn.row_factory = sqlite.Row
-		c = conn.cursor()
-		c.execute(sql,t)
-		print "%s tasks" % self.options.status
-		for r in c:
-			pid = r['parentId']
-			if pid==None:
-				pid=""
-			if self.options.status == 'all':
-				print "%5s %5s %-10s %-50s" % (r['_id'],pid,r['status'],r['name'])
-			else:
-				print "%5s %5s %-50s" % (r['_id'],pid,r['name'])
+	def showtasks(self, indent, tasks):
+		for t in tasks:
+			self.showtask(indent, t)
+			self.showtasks(indent+1, t.kids)
 
+	def showtask(self, indent, task):
+		if self.options.status == 'all':
+			print "%4d %-10s %s- %s" % \
+				(task.id, task.status, "".ljust(indent*2), task.name)
+		if self.options.status == task.status:
+			print "%4d %s- %s" % (task.id, "".ljust(indent*2), task.name)
 
 if __name__ == '__main__':
 	todo = Todo()
